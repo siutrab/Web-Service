@@ -11,12 +11,12 @@ Packets::~Packets()
 {
 }
 
-bool Packets::packMessage(const string & message, sf::Packet & packet)
+bool Packets::packMessage(sf::Packet* packet, string* message)
 {
-	 return (packet << message);
+	 return (*packet << *message);
 }
 
-bool Packets::unpackMessage(sf::Packet & packet, string* messagePointer)
+bool Packets::unpackMessage(sf::Packet* packet, string* messagePointer)
 {
-	return (packet >> *messagePointer);
+	return (*packet >> *messagePointer);
 }

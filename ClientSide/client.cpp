@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "client.h"
 
+
 ///
 // CLIENT CLASS
 ///
@@ -39,8 +40,8 @@
 
 		bool client::receiveMessage()
 		{
-			sf::Packet packet;
-			socket.receive(packet);
+			sf::Packet* packet = new sf::Packet();
+			socket.receive(*packet);
 			return Packets::unpackMessage(packet, receivedMessage);
 		}
 		

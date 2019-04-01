@@ -1,7 +1,7 @@
 #pragma once
 #include "SFML/Network.hpp"
 #include <iostream>
-
+#include "Packets.h"
 
 
 using namespace std;
@@ -13,8 +13,8 @@ private:
 	sf::TcpSocket socket;
 	sf::IpAddress ip;
 	size_t port;
-	string* receivedMessage;
-	string* givenMessage;
+	string* receivedMessage = new string;
+	string* givenMessage = new string;
 
 public:
 	client();

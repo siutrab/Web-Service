@@ -9,7 +9,7 @@ class Packets
 	~Packets();
 public:
 
-	static bool packMessage(const string & message, sf::Packet & packet);
-	static bool unpackMessage(sf::Packet & packet, string* messagePointer);
+	static bool packMessage(sf::Packet* packet, string* message);
+	static bool unpackMessage(sf::Packet* packet, string* messagePointer);
 };
 
