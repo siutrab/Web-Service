@@ -2,39 +2,53 @@
 #include "messageSystem.h"
 
 
-	messageSystem::messageSystem()
+messageSystem::messageSystem(server* parentServer)
+	:	parentServer(parentServer), 
+		clientsPtr(parentServer->getConnectedClients())
+{
+}
+
+
+messageSystem::~messageSystem()
+{
+}
+
+void messageSystem::handleReceivedPacket(sf::Packet* packet, Client* client)
+{
+	packetStructure* unpackMsg = Packets::unpackMessage(packet);
+	if (unpackMsg->succeed)
 	{
+		client->setRequest(unpackMsg);
 	}
+	else delete unpackMsg;
+}
 
 
-	messageSystem::~messageSystem()
+
+message::message(unsigned int numberOfPackets)
+{
+}
+message::~message()
+{
+	delete[] packetArray;
+}
+
+void message::insertPacket(string* packet)
+{
+	packetArray[actualPacketIndex] = *packet;
+	actualPacketIndex++;
+}
+
+void message::insertPacket(packetStructure* packet)
+{
+	if(empty)
 	{
+		packetArray = new string[packet->maxIndex];		// Array length is number of packets in whole message
 	}
+	packetArray[packet->index] = packet->content;
+	empty = false;
 
-	void messageSystem::handleReceivedPacket(sf::Packet* packet, Client* client)
-	{
-		string* messagePtr = new string;
-		if (Packets::unpackMessage(packet, messagePtr))
-		{
-			client->setRequest(messagePtr);	//////// NO WTF
-		}
-		delete messagePtr;
-		messagePtr = nullptr;
-	}
-
-
-
-	message::message(unsigned int numberOfPackets)
-	{
-		packetArray = new string[numberOfPackets];
-	}
-	message::~message()
-	{
-		delete[] packetArray;
-	}
-
-	void message::insertPacket(string* packet)
-	{
-		packetArray[actualPacketIndex] = *packet;
-		actualPacketIndex++;
-	}
+	// packet is unpacked so it can be removed
+	delete packet;
+	packet = nullptr;
+}

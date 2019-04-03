@@ -5,109 +5,82 @@
 // SERVER
 ///
 
-		server::server(size_t port)
-			: port(port)
-		{
-			msgSystem = new messageSystem();
-			connectedClients = new ConnectedClients(this);
-		}
+	server::server(size_t port)
+		: port(port)
+	{
+		msgSystem = new messageSystem(this);
+		connectedClients = new ConnectedClients(this);
+		listener.setBlocking(false);
+	}
 
-		server::~server()
-		{
+	server::~server()
+	{
 
-			// Deleting pointers
-			delete connectedClients;
-			connectedClients = nullptr;
+		// Deleting pointers
+		delete connectedClients;
+		connectedClients = nullptr;
 			
-			delete msgSystem;
-			msgSystem = nullptr;
+		delete msgSystem;
+		msgSystem = nullptr;
 
-		}
+	}
 
-		/// Initializes the server and starts its main loop
-		void server::start()
+	/// Initializes the server and starts its main loop
+	void server::start()
+	{
+		listener.listen(port);
+		selector.add(listener);	// adding first listener socket
+		running = true;			// initializing server
+		while (running)
 		{
-			listener.listen(port);
-			selector.add(listener);	// adding first listener socket
-			running = true;			// initializing server
-			while (running)
+			if (selector.wait())	// waits for data at any socket, at listener as well
 			{
-				if (selector.wait())	// waits for data at any socket, at listener as well
-				{
-					lookForNewClients();
-					connectedClients->listen();
-				}
+				lookForNewClients();
+				connectedClients->listen();
 			}
 		}
+	}
 
-		void server::stop()
-		{
-			running = false;
-		}
+	void server::stop() { running = false; }
 
-		///	Checks if there are more clients that want to connect
-		void server::lookForNewClients()
+	///	Checks if there are more clients that want to connect
+	void server::lookForNewClients()
+	{
+		// if socket is not occupied
+		if (selector.isReady(listener))		
 		{
-			// if socket is not occupied
-			if (selector.isReady(listener))		
+			sf::TcpSocket* socket = new sf::TcpSocket();
+			socket->setBlocking(false);
+
+			// accepting new socket
+			if (listener.accept(*socket) == sf::Socket::Done)
 			{
-				sf::TcpSocket* socket = new sf::TcpSocket();
-
-				// accepting new socket
-				if (listener.accept(*socket) == sf::Socket::Done)
-				{
-					connectedClients->addClient(socket);
-					selector.add(*socket);
-				}
+				connectedClients->addClient(socket);
+				selector.add(*socket);
 			}
+			else delete socket;
 		}
+	}
 
-		/// Receiving message and saves it in string receivedMessage
-		/// returns true if succeed
-		bool server::receiveMessage(Client* client)
+	/// Receiving message and saves it in string receivedMessage
+	/// returns true if succeed
+	bool server::receiveMessage(Client* client)
+	{
+		sf::TcpSocket* socket = (client->getSocket());
+
+		if(selector.isReady(*socket))
 		{
-			sf::TcpSocket* socket = (client->getSocket());
+			sf::Packet* packet = new sf::Packet();
 
-			if(selector.isReady(*socket))
+			if (socket->receive(*packet) == sf::Socket::Done)
 			{
-				sf::Packet* packet = new sf::Packet();
-					if (socket->receive(*packet) == sf::Socket::Done)
-					{
-						msgSystem->handleReceivedPacket(packet, client);
-						return true;
-					}
-				delete packet;
+				msgSystem->handleReceivedPacket(packet, client);
+				return true;
 			}
-			return false;
+			delete packet;
 		}
-
-
-		/*
-		///// Waits until a client connect, and returns his ip address when it happens
-		//void server::listen()
-		//{
-		//	//sf::Packet packet;
-
-		//	//listener.listen(port);
-		//	//listener.accept(socket);	// Waiting for connection
-
-		//	//socket.receive(packet);		// Receiving package
-
-		//	//Packets::unpackMessage(packet, receivedMessage);
-		//	//
-		//	//cout << "The client said: " << * receivedMessage << endl;
-		//	//cout << socket.getRemoteAddress() << endl;
-		//	//return socket.getRemoteAddress();
-		//	
-		//	//////for (std::list<Client*>::iterator i = connectedClients->ClientsList.begin(); i != connectedClients->ClientsList.end(); i++)
-		//	//////{
-		//	//////	Client* client = *i;
-		//	//////	sf::TcpSocket* clientsSocket = client->socket;
-		//	//////}
-
-		//}
-		*/
-
+		return false;
+	}
 
 ///
 // CONNECTED CLIENTS
@@ -116,7 +89,7 @@
 		ConnectedClients::ConnectedClients(server * serverPtr)
 			: serverPointer(serverPtr)
 		{
-
+			
 		}
 
 		ConnectedClients::~ConnectedClients()
@@ -128,11 +101,15 @@
 
 		void ConnectedClients::clearList()
 		{
+			// Deleting heap
 			for (std::list<Client*>::iterator i = ClientsList.begin(); i != ClientsList.end(); i++)
 			{
 				Client* client = *i;
 				delete client;
 			}
+
+			// Deleting pointers
+			ClientsList.clear();
 		}
 
 		void ConnectedClients::addClient(sf::TcpSocket* socket)
@@ -157,23 +134,27 @@
 		}
 
 
+		ConnectedClients* server::getConnectedClients() { return connectedClients; }
+
 ///
 // CLIENT
 ///
 
-		Client::Client(sf::TcpSocket* socket)
-			: socket(socket)
-		{
+Client::Client(sf::TcpSocket* socket)
+	:	socket(socket),
+		request(new message()),
+		response(new message())
+{
+			
+}
 
-		}
+Client::~Client()
+{
+	delete socket;
+	socket = nullptr;
+}
 
-		Client::~Client()
-		{
-			delete socket;
-			socket = nullptr;
-		}
-
-		sf::TcpSocket* Client::getSocket() { return socket; }
-		message* Client::getRequest() { return request; }
-		inline void Client::setRequest(string* message) { request->insertPacket(message); }
-		inline void Client::setResponse(string* message) { response->insertPacket(message); }
+sf::TcpSocket* Client::getSocket() { return socket; }
+message* Client::getRequest() { return request; }
+void Client::setRequest(packetStructure* packet) { request->insertPacket(packet); }
+void Client::setResponse(string* message) { response->insertPacket(message); }

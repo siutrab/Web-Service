@@ -30,7 +30,13 @@
 			}
 
 			sf::Packet packet;
-			if (packet << message)
+
+			sf::Int64 length = 10;
+			sf::Int64 index = 0;
+			sf::Int64 maxIndex = 5;
+			string content = message;
+
+			if (packet << length << index << maxIndex << content)
 			{
 				socket.send(packet);
 				return true;
@@ -42,7 +48,8 @@
 		{
 			sf::Packet* packet = new sf::Packet();
 			socket.receive(*packet);
-			return Packets::unpackMessage(packet, receivedMessage);
+			//return Packets::unpackMessage(packet, receivedMessage);
+			return true;
 		}
 		
 

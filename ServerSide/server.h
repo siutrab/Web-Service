@@ -30,9 +30,14 @@ private:
 public:
 	server(size_t port);
 	~server();
+
+	// Main loop of the program
 	void start();
 	void stop();
+	
 	bool receiveMessage(Client* client);
+
+	ConnectedClients* getConnectedClients();
 };
 
 
@@ -64,10 +69,10 @@ private:
 public:
 	Client(sf::TcpSocket* socket);
 	~Client();
-	inline sf::TcpSocket* getSocket();
-	inline void setRequest(string* message);
-	inline void setResponse(string* message);
-	inline message* getRequest();
+	sf::TcpSocket* getSocket();
+	void setRequest(packetStructure* packet);
+	void setResponse(string* message);
+	message* getRequest();
 };
 
 
